@@ -221,8 +221,12 @@ def reel(rid):
                     [request.form.get(f, r[f]) for f in fields] + [rid])
         if action == "approve":
             chosen = [p for p in PLATFORMS if request.form.get("p_" + p)]
+            s = get_settings(con)
+            missing = {p: missing_setup(s, p) for p in chosen if missing_setup(s, p)}
             if not chosen:
                 flash("Ochha ma ochhu ek platform pasand karo")
+            elif missing:
+                flash("Haju post nahi thay: " + " · ".join(f"{LABEL[p]}: {m}" for p, m in missing.items()))
             elif r["status"] == "posting":
                 flash("Aa reel post thai rahi che")
             else:
@@ -287,6 +291,16 @@ def status(rid):
 
 
 # ---------------------------------------------------------------- publishing
+def missing_setup(s, platform):
+    """Return a message if this platform is not configured yet, else None."""
+    if platform in ("instagram", "facebook"):
+        if not s.get("meta_page_id") or not s.get("meta_page_token"):
+            return "Settings ma Facebook Page ID ane Page token naakho"
+    if platform == "youtube" and not s.get("yt_refresh_token"):
+        return "Settings ma YouTube connect karo"
+    return None
+
+
 def full_caption(r, s):
     parts = [r["caption"].strip(), r["hashtags"].strip(), s.get("caption_footer", "").strip()]
     return "\n\n".join(p for p in parts if p)

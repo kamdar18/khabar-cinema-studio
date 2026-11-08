@@ -111,6 +111,8 @@ def publish_instagram(settings, video_path, caption):
 
 def publish_facebook(settings, video_path, caption):
     token, page_id = settings.get("meta_page_token"), settings.get("meta_page_id")
+    if not token or not page_id:
+        raise PublishError("Page ID ane Page token settings ma nathi")
     g = _graph(settings)
     start = _check(
         requests.post(f"{g}/{page_id}/video_reels", data={"upload_phase": "start", "access_token": token},

@@ -21,7 +21,7 @@
 <label>YouTube description</label><textarea name="yt_description">{{ r.yt_description }}</textarea>
 <label>Instagram/Facebook par aavu dekhashe</label><pre>{{ preview }}</pre>
 
-{% if r.status in ('pending', 'rejected') %}
+{% if r.status in ('pending', 'rejected', 'failed') and not r.platforms.values()|selectattr('state','equalto','posted')|list %}
 <label>Kya post karvi che?</label>
 {% for p in PLATFORMS %}<label class="check"><input type="checkbox" name="p_{{ p }}" checked> {{ LABEL[p] }}</label>{% endfor %}
 <p><button class="btn green block" name="action" value="approve"
