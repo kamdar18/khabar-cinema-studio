@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% block body %}
+<h2>Navi reel upload</h2>
+<form method="post" enctype="multipart/form-data" class="card" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Upload thai rahyu…'">
+<input type="hidden" name="csrf" value="{{ csrf }}">
+<label>Video (MP4, 9:16)</label><input type="file" name="video" accept="video/mp4,video/quicktime" required>
+<label>Title (andar mate)</label><input name="title" placeholder="दिल्ली से आगरा, 59 मिनट">
+<label>Caption (Instagram + Facebook)</label><textarea name="caption" rows="6"></textarea>
+<label>Hashtags</label><input name="hashtags" value="{{ settings.default_hashtags }}">
+<label>YouTube title <small>(khali rakho to upar no title)</small></label><input name="yt_title" maxlength="100">
+<label>YouTube description <small>(khali rakho to caption)</small></label><textarea name="yt_description"></textarea>
+<p><button class="btn red block">Upload</button></p>
+</form>
+{% endblock %}

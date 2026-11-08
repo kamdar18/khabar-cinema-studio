@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="hi"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>{% block title %}Khabar Cinema Studio{% endblock %}</title>
+<link rel="icon" href="{{ url_for('static', filename='logo.png') }}">
+<style>
+:root{--bg:#121316;--card:#1c1d21;--line:#2c2e33;--text:#f3efe6;--muted:#a19c91;--red:#E3002B;--yellow:#FFD54A;--green:#2fbf71}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Noto Sans Devanagari",sans-serif}
+a{color:var(--yellow)}header{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+header img{width:36px;height:36px;border-radius:50%}header b{flex:1}header nav a{margin-left:12px;text-decoration:none;color:var(--text)}
+main{max-width:760px;margin:0 auto;padding:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.btn{display:inline-block;border:0;border-radius:10px;padding:11px 16px;font-size:16px;font-weight:600;cursor:pointer;text-decoration:none;color:#fff;background:#3a3c42}
+.btn.red{background:var(--red)}.btn.green{background:var(--green);color:#06120b}.btn.ghost{background:transparent;border:1px solid var(--line)}
+.btn.block{display:block;width:100%;text-align:center}
+input,textarea,select{width:100%;background:#0f1012;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit}
+textarea{min-height:90px}label{display:block;font-weight:600;margin:12px 0 4px}small,.muted{color:var(--muted)}
+.flash{background:#2a2410;border:1px solid #5a4a12;padding:10px 12px;border-radius:10px;margin-bottom:12px}
+.tabs{display:flex;gap:8px;margin-bottom:12px;overflow:auto}.tabs a{padding:8px 12px;border-radius:999px;border:1px solid var(--line);text-decoration:none;color:var(--text);white-space:nowrap}
+.tabs a.on{background:var(--text);color:var(--bg)}
+.pill{display:inline-block;font-size:13px;padding:2px 9px;border-radius:999px;background:#2c2e33}
+.pill.posted{background:#123d26;color:#7ff0b0}.pill.failed{background:#4a1018;color:#ff9aa8}.pill.posting,.pill.queued{background:#3d3410;color:#ffe08a}
+.row{display:flex;gap:12px;align-items:center}.grow{flex:1;min-width:0}
+video{width:100%;max-height:70vh;background:#000;border-radius:12px}
+.check{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);border-radius:10px;margin:6px 0}.check input{width:22px;height:22px}
+pre{white-space:pre-wrap;background:#0f1012;border:1px solid var(--line);border-radius:10px;padding:10px;margin:0}
+</style></head><body>
+{% if session.ok %}<header><img src="{{ url_for('static', filename='logo.png') }}" alt=""><b>Khabar Cinema</b>
+<nav><a href="/">Reels</a><a href="/new">+ New</a><a href="/settings">⚙️</a></nav></header>{% endif %}
+<main>
+{% with m = get_flashed_messages() %}{% for x in m %}<div class="flash">{{ x }}</div>{% endfor %}{% endwith %}
+{% block body %}{% endblock %}
+</main></body></html>

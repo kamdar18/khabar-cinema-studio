@@ -1,0 +1,7 @@
+{% extends "base.html" %}{% block body %}
+<div class="card" style="max-width:380px;margin:12vh auto;text-align:center">
+<img src="{{ url_for('static', filename='logo.png') }}" alt="" style="width:96px;border-radius:50%">
+<h2>Khabar Cinema Studio</h2>
+<form method="post"><input type="password" name="password" placeholder="Password" autofocus required>
+<p><button class="btn red block">Login</button></p></form></div>
+{% endblock %}

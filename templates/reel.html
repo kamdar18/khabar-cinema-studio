@@ -1,0 +1,41 @@
+{% extends "base.html" %}{% block body %}
+<video src="/media/{{ r.video }}" controls playsinline preload="metadata"></video>
+<p class="row"><span class="grow"><b>{{ r.title }}</b> <span class="pill">{{ r.status }}</span></span>
+<a class="btn ghost" href="/media/{{ r.video }}?dl=1">⬇️ Download</a></p>
+
+{% if r.platforms %}<div class="card" id="plat"><b>Posting</b>
+{% for p, v in r.platforms.items() %}<div style="margin-top:8px"><span class="pill {{ v.state }}">{{ LABEL[p] }}: {{ v.state }}</span>
+{% if v.url %} <a href="{{ v.url }}" target="_blank" rel="noopener">kholo ↗</a>{% endif %}
+{% if v.error %}<br><small style="color:#ff9aa8">{{ v.error }}</small>{% endif %}</div>{% endfor %}
+{% if r.status == 'posting' %}<p class="muted">Page jate refresh thashe…</p>
+<script>setTimeout(()=>location.reload(),8000)</script>{% endif %}
+{% if 'youtube' in r.platforms and r.platforms.youtube.state == 'posted' and settings.yt_privacy == 'private' %}
+<p class="muted">YouTube par video <b>private</b> che (Google audit sudhi). YouTube Studio ma jai "Public" kari shako.</p>{% endif %}
+</div>{% endif %}
+
+<form method="post" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
+<label>Title</label><input name="title" value="{{ r.title }}">
+<label>Caption</label><textarea name="caption" rows="7">{{ r.caption }}</textarea>
+<label>Hashtags</label><input name="hashtags" value="{{ r.hashtags }}">
+<label>YouTube title</label><input name="yt_title" value="{{ r.yt_title }}" maxlength="100">
+<label>YouTube description</label><textarea name="yt_description">{{ r.yt_description }}</textarea>
+<label>Instagram/Facebook par aavu dekhashe</label><pre>{{ preview }}</pre>
+
+{% if r.status in ('pending', 'rejected') %}
+<label>Kya post karvi che?</label>
+{% for p in PLATFORMS %}<label class="check"><input type="checkbox" name="p_{{ p }}" checked> {{ LABEL[p] }}</label>{% endfor %}
+<p><button class="btn green block" name="action" value="approve"
+ onclick="return confirm('Aa reel pasand karela platform par post thashe. Pakku?')">✅ Approve & Post</button></p>
+{% endif %}
+<p class="row"><button class="btn ghost grow" name="action" value="save">💾 Save</button>
+{% if r.status == 'pending' %}<button class="btn ghost grow" name="action" value="reject">🗑 Reject</button>{% endif %}
+{% if r.status == 'rejected' %}<button class="btn ghost grow" name="action" value="restore">↩️ Pachhi lavo</button>{% endif %}
+{% if r.status in ('failed', 'partial') %}<button class="btn red grow" name="action" value="retry">🔁 Failed fari try karo</button>{% endif %}
+</p>
+<p><button class="btn ghost block" name="action" value="delete" style="color:#ff9aa8"
+ onclick="return confirm('Video server mathi delete thashe (posted reels social media par raheshe). Pakku?')">Server mathi delete</button></p>
+</form>
+
+<details class="card"><summary>History</summary>
+{% for l in logs %}<div><small>{{ l.at[:16].replace('T',' ') }}</small> {{ l.msg }}</div>{% endfor %}</details>
+{% endblock %}

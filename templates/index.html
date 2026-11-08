@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% block body %}
+<div class="tabs">
+<a href="/?tab=pending" class="{{ 'on' if tab=='pending' }}">⏳ Approve karvani ({{ counts.get('pending', 0) }})</a>
+<a href="/?tab=done" class="{{ 'on' if tab=='done' }}">✅ Posted</a>
+<a href="/?tab=rejected" class="{{ 'on' if tab=='rejected' }}">🗑 Rejected</a>
+</div>
+{% if not settings.meta_page_token or not settings.yt_refresh_token %}
+<div class="flash">⚙️ Setup baaki che: {% if not settings.meta_page_token %}Instagram/Facebook token{% endif %}
+{% if not settings.meta_page_token and not settings.yt_refresh_token %} ane {% endif %}
+{% if not settings.yt_refresh_token %}YouTube connect{% endif %}. <a href="/settings">Settings kholo</a></div>
+{% endif %}
+{% for r in reels %}
+<a href="/reel/{{ r.id }}" style="text-decoration:none;color:inherit"><div class="card row">
+<video src="/media/{{ r.video }}#t=1" preload="metadata" muted style="width:84px;height:150px;object-fit:cover"></video>
+<div class="grow"><b>{{ r.title }}</b><br><small>{{ r.created[:16].replace('T', ' ') }} UTC</small><br>
+{% if r.platforms %}{% for p, v in r.platforms.items() %}<span class="pill {{ v.state }}">{{ LABEL[p] }}: {{ v.state }}</span> {% endfor %}
+{% else %}<span class="pill">{{ r.status }}</span>{% endif %}</div></div></a>
+{% else %}
+<div class="card muted" style="text-align:center">Koi reel nathi. <a href="/new">Navi reel upload karo</a></div>
+{% endfor %}
+{% endblock %}

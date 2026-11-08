@@ -1,0 +1,45 @@
+{% extends "base.html" %}{% block body %}
+<h2>Settings</h2>
+<p class="muted">Server par khali jagya: {{ '%.1f'|format(free_gb) }} GB</p>
+
+<form method="post" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
+<h3>📸 Instagram + 📘 Facebook</h3>
+<label>Facebook Page ID</label><input name="meta_page_id" value="{{ s.meta_page_id or '' }}" inputmode="numeric">
+<label>Page access token {% if s.meta_page_token %}<span class="pill posted">set che</span>{% endif %}</label>
+<input name="meta_page_token" type="password" placeholder="{{ 'Badalvu hoy to j naakho' if s.meta_page_token else 'EAAG…' }}" autocomplete="off">
+<label>Instagram account ID <small>(Test button jate bharshe)</small></label><input name="ig_user_id" value="{{ s.ig_user_id or '' }}">
+<label>Graph API version</label><input name="graph_version" value="{{ s.graph_version }}">
+<p class="row"><button class="btn red grow" name="action" value="save">Save</button>
+<button class="btn ghost grow" name="action" value="test_meta">Test connection</button></p>
+</form>
+
+<form method="post" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
+<h3>▶️ YouTube</h3>
+<label>OAuth Client ID</label><input name="yt_client_id" value="{{ s.yt_client_id or '' }}">
+<label>Client secret {% if s.yt_client_secret %}<span class="pill posted">set che</span>{% endif %}</label>
+<input name="yt_client_secret" type="password" placeholder="{{ 'Badalvu hoy to j naakho' if s.yt_client_secret else 'GOCSPX-…' }}" autocomplete="off">
+<label>Upload privacy</label>
+<select name="yt_privacy">{% for v in ['private','unlisted','public'] %}<option {{ 'selected' if s.yt_privacy==v }}>{{ v }}</option>{% endfor %}</select>
+<small>Google audit pass na thay tya sudhi API thi upload thayela video private j rahe che.</small>
+<p><button class="btn red block" name="action" value="save">Save</button></p>
+</form>
+
+{% if yt_url %}<form method="post" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
+<h3>YouTube connect {% if s.yt_refresh_token %}<span class="pill posted">connected</span>{% endif %}</h3>
+<ol><li><a href="{{ yt_url }}" target="_blank" rel="noopener">Aa link kholo</a> → Khabar Cinema channel pasand karo → Allow.</li>
+<li>Chhelle "This site can't be reached" (localhost) aavshe. E page nu <b>aakhu address</b> copy karo.</li>
+<li>Niche paste kari ne Connect dabavo.</li></ol>
+<input name="code" placeholder="http://localhost/?code=…" autocomplete="off">
+<p class="row"><button class="btn red grow" name="action" value="yt_code">Connect</button>
+{% if s.yt_refresh_token %}<button class="btn ghost grow" name="action" value="yt_disconnect">Disconnect</button>{% endif %}</p>
+</form>{% endif %}
+
+<form method="post" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
+<h3>Caption defaults</h3>
+<label>Default hashtags</label><input name="default_hashtags" value="{{ s.default_hashtags }}">
+<label>Caption ni niche hamesha <small>(AI ni jankari)</small></label><textarea name="caption_footer">{{ s.caption_footer }}</textarea>
+<p><button class="btn red block" name="action" value="save">Save</button></p>
+</form>
+
+<form method="post" action="/logout"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost block">Logout</button></form>
+{% endblock %}
