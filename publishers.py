@@ -31,7 +31,8 @@ def _check(resp, what):
         msg = err.get("message") if isinstance(err, dict) else str(err)
         if isinstance(data, dict) and data.get("error_description"):
             msg = f"{msg} ({data['error_description']})"
-        raise PublishError(f"{what}: {msg or resp.status_code}")
+        detail = msg or (resp.text or "")[:300] or str(resp.status_code)
+        raise PublishError(f"{what}: {resp.status_code} {detail}")
     return data
 
 
@@ -66,6 +67,16 @@ def meta_check(settings):
 
 
 def publish_instagram(settings, video_path, caption):
+    try:
+        return _publish_instagram(settings, video_path, caption)
+    except PublishError as e:
+        if "upload" not in str(e) and "processing" not in str(e).lower():
+            raise
+        time.sleep(15)  # a fresh container and a second upload fixes most transient upload errors
+        return _publish_instagram(settings, video_path, caption)
+
+
+def _publish_instagram(settings, video_path, caption):
     token = settings.get("meta_page_token")
     ig_id = settings.get("ig_user_id") or meta_check(settings).get("ig_id")
     if not ig_id:
