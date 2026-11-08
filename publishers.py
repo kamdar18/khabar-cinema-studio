@@ -29,6 +29,8 @@ def _check(resp, what):
     if resp.status_code >= 400 or (isinstance(data, dict) and "error" in data):
         err = data.get("error", data) if isinstance(data, dict) else data
         msg = err.get("message") if isinstance(err, dict) else str(err)
+        if isinstance(data, dict) and data.get("error_description"):
+            msg = f"{msg} ({data['error_description']})"
         raise PublishError(f"{what}: {msg or resp.status_code}")
     return data
 
@@ -151,10 +153,14 @@ def youtube_auth_url(settings):
 
 
 def youtube_exchange_code(settings, code):
-    from urllib.parse import parse_qs, urlparse
+    import re
+    from urllib.parse import unquote
     code = code.strip()
-    if code.startswith("http"):  # user pasted the whole localhost URL
-        code = parse_qs(urlparse(code).query).get("code", [""])[0]
+    m = re.search(r"[?&]code=([^&\s#]+)", code)  # whole URL pasted, with or without http://
+    if m:
+        code = unquote(m.group(1))
+    if not code:
+        raise PublishError("Code khali che. 'localhost' page nu aakhu address paste karo.")
     data = _check(
         requests.post("https://oauth2.googleapis.com/token", data={
             "code": code, "client_id": settings.get("yt_client_id"),
