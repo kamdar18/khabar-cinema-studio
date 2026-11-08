@@ -27,7 +27,11 @@ cd khabar-cinema-studio
 sudo bash install.sh
 ```
 
-`install.sh` website no password puchhshe. Pachhi phone ma `http://TAMARO-IP` kholo.
+`install.sh` website no password puchhshe. Pachhi phone ma `http://TAMARO-IP:8090` kholo.
+
+Website alag port **8090** par chale che. Server par chalta tamara bija projects (port 80/443) ne kai asar nathi thati, ane firewall pan chalu nathi karti. 8090 pehle thi vaparato hoy to: `PUBLIC_PORT=8091 sudo -E bash install.sh`.
+
+DigitalOcean ma **Cloud Firewall** chalu hoy to tya inbound **TCP 8090** allow karjo.
 
 **Update karva:** `cd /opt/khabar-cinema-studio && git pull && sudo bash install.sh`
 

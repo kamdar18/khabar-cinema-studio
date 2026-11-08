@@ -5,14 +5,26 @@ set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_USER=studio
-PORT=8000
+PORT="${APP_PORT:-8765}"  # internal app port (only on 127.0.0.1)
+PUBLIC_PORT="${PUBLIC_PORT:-8090}"  # website: http://IP:8090 — does not touch port 80
 
 if [ "$(id -u)" -ne 0 ]; then echo "root tarike chalavo: sudo bash install.sh"; exit 1; fi
 
 echo "==> Packages"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq python3 python3-venv python3-pip nginx ufw >/dev/null
+apt-get install -y -qq python3 python3-venv python3-pip >/dev/null
+if ! command -v nginx >/dev/null; then
+  # fresh nginx: its default site would grab port 80 from your other projects, so remove it
+  apt-get install -y -qq nginx >/dev/null || true
+  rm -f /etc/nginx/sites-enabled/default
+fi
+
+if ss -ltn | grep -q ":$PUBLIC_PORT \|:$PORT "; then
+  if ! systemctl is-active -q khabar-studio; then
+    echo "Port $PUBLIC_PORT ke $PORT pehle thi vaparay che. Bijo port: PUBLIC_PORT=8091 sudo -E bash install.sh"; exit 1
+  fi
+fi
 
 echo "==> 1 GB swap (1 GB RAM server mate)"
 if ! swapon --show | grep -q /swapfile; then
@@ -56,7 +68,7 @@ EnvironmentFile=$APP_DIR/.env
 Environment=DATA_DIR=$APP_DIR/data
 ExecStart=$APP_DIR/.venv/bin/gunicorn -w 1 --threads 4 -b 127.0.0.1:$PORT --timeout 900 app:app
 Restart=always
-MemoryMax=600M
+MemoryMax=350M
 
 [Install]
 WantedBy=multi-user.target
@@ -68,7 +80,7 @@ systemctl restart khabar-studio
 echo "==> nginx"
 cat > /etc/nginx/sites-available/khabar-studio <<EOF
 server {
-    listen 80 default_server;
+    listen $PUBLIC_PORT;
     server_name _;
     client_max_body_size 300M;
     proxy_read_timeout 900s;
@@ -82,12 +94,13 @@ server {
 }
 EOF
 ln -sf /etc/nginx/sites-available/khabar-studio /etc/nginx/sites-enabled/khabar-studio
-rm -f /etc/nginx/sites-enabled/default
-nginx -t -q && systemctl reload nginx
+nginx -t -q && { systemctl reload nginx 2>/dev/null || systemctl restart nginx; }
 
 echo "==> Firewall"
-ufw allow OpenSSH >/dev/null; ufw allow 80/tcp >/dev/null; ufw --force enable >/dev/null
+# never turn the firewall on here (other projects may need other ports); only open our port if it is already on
+if command -v ufw >/dev/null && ufw status | grep -q "Status: active"; then ufw allow "$PUBLIC_PORT/tcp" >/dev/null; fi
 
 IP=$(curl -s -4 ifconfig.me || hostname -I | awk '{print $1}')
 echo
-echo "✅ Thai gayu! Phone ma kholo:  http://$IP"
+echo "✅ Thai gayu! Phone ma kholo:  http://$IP:$PUBLIC_PORT"
+echo "(Tamara bija projects jem chalta hata em j chalshe.)"
