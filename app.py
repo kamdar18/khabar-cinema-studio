@@ -362,7 +362,7 @@ def settings_page():
     con = db()
     if request.method == "POST":
         action = request.form.get("action", "save")
-        if action == "save":
+        if action in ("save", "test_meta"):  # Test also saves what was typed
             for k in SETTING_KEYS:
                 if k not in request.form:
                     continue
@@ -371,8 +371,9 @@ def settings_page():
                     continue  # empty secret field = keep the old value
                 set_setting(con, k, v)
             con.commit()
-            flash("Settings save thaya")
-        elif action == "test_meta":
+            if action == "save":
+                flash("Settings save thaya")
+        if action == "test_meta":
             try:
                 info = pub.meta_check(get_settings(con))
                 if info.get("ig_id"):
