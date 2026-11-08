@@ -27,7 +27,7 @@ if ss -ltn | grep -q ":$PUBLIC_PORT \|:$PORT "; then
 fi
 
 echo "==> 1 GB swap (1 GB RAM server mate)"
-if ! swapon --show | grep -q /swapfile; then
+if [ -z "$(swapon --noheadings --show)" ]; then
   fallocate -l 1G /swapfile && chmod 600 /swapfile && mkswap /swapfile >/dev/null && swapon /swapfile
   grep -q /swapfile /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
 fi
