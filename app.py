@@ -1,4 +1,6 @@
 """Khabar Cinema Studio: upload a reel, review it, approve it, post it to 3 platforms."""
+import base64
+import binascii
 import hmac
 import json
 import os
@@ -26,6 +28,7 @@ app = Flask(__name__)
 app.config.update(
     SECRET_KEY=os.environ.get("SECRET_KEY") or secrets.token_hex(32),
     MAX_CONTENT_LENGTH=int(os.environ.get("MAX_UPLOAD_MB", "300")) * 1024 * 1024,
+    MAX_FORM_MEMORY_SIZE=4 * 1024 * 1024,  # room for the cover JPEG sent from the reel page
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Strict",
     PERMANENT_SESSION_LIFETIME=60 * 60 * 24 * 30,
@@ -78,6 +81,9 @@ def init_db():
     CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT);
     CREATE TABLE IF NOT EXISTS log(id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT, reel TEXT, msg TEXT);
     """)
+    cols = {r[1] for r in con.execute("PRAGMA table_info(reels)")}
+    if "cover_sec" not in cols:  # added later: which frame becomes the cover
+        con.execute("ALTER TABLE reels ADD COLUMN cover_sec REAL")
     con.commit()
     con.close()
 
@@ -219,6 +225,7 @@ def reel(rid):
         fields = ("title", "caption", "hashtags", "yt_title", "yt_description")
         con.execute(f"UPDATE reels SET {', '.join(f + '=?' for f in fields)} WHERE id=?",
                     [request.form.get(f, r[f]) for f in fields] + [rid])
+        save_cover(con, r, request.form)
         if action == "approve":
             chosen = [p for p in PLATFORMS if request.form.get("p_" + p)]
             s = get_settings(con)
@@ -254,10 +261,11 @@ def reel(rid):
                 threading.Thread(target=run_publish, args=(rid, failed), daemon=True).start()
                 flash("Fari try thai rahyu che…")
         elif action == "delete":
-            try:
-                os.remove(os.path.join(MEDIA, r["video"]))
-            except OSError:
-                pass
+            for f in (os.path.join(MEDIA, r["video"]), cover_path(r)):
+                try:
+                    os.remove(f)
+                except OSError:
+                    pass
             con.execute("DELETE FROM reels WHERE id=?", (rid,))
             log(con, rid, "deleted")
             con.commit()
@@ -269,13 +277,42 @@ def reel(rid):
         return redirect(url_for("reel", rid=rid))
     s = get_settings()
     logs = con.execute("SELECT * FROM log WHERE reel=? ORDER BY id DESC LIMIT 30", (rid,)).fetchall()
-    return render_template("reel.html", r=r, settings=s, preview=full_caption(r, s), logs=logs)
+    has_cover = os.path.exists(cover_path(r))
+    return render_template("reel.html", r=r, settings=s, preview=full_caption(r, s), logs=logs,
+                           has_cover=has_cover, default_cover=DEFAULT_COVER_SEC)
+
+
+DEFAULT_COVER_SEC = 2.0  # never the first frame: many reels open on black
+
+
+def cover_path(r):
+    return os.path.join(MEDIA, r["video"].rsplit(".", 1)[0] + ".jpg")
+
+
+def save_cover(con, r, form):
+    """Store the cover second and the JPEG the browser grabbed from that frame."""
+    try:
+        sec = float(form.get("cover_sec", ""))
+    except ValueError:
+        return
+    sec = max(0.0, min(sec, 600.0))
+    con.execute("UPDATE reels SET cover_sec=? WHERE id=?", (sec, r["id"]))
+    jpg = form.get("cover_jpg", "")
+    head = "data:image/jpeg;base64,"
+    if jpg.startswith(head) and len(jpg) < 4_000_000:
+        try:
+            data = base64.b64decode(jpg[len(head):], validate=True)
+        except (ValueError, binascii.Error):
+            return
+        if data[:3] == b"\xff\xd8\xff":
+            with open(cover_path(r), "wb") as f:
+                f.write(data)
 
 
 @app.route("/media/<name>")
 @login_required
 def media(name):
-    if not re.fullmatch(r"[0-9a-f]{12}\.mp4", name):
+    if not re.fullmatch(r"[0-9a-f]{12}\.(mp4|jpg)", name):
         abort(404)
     return send_from_directory(MEDIA, name, conditional=True,
                                as_attachment=request.args.get("dl") == "1")
@@ -317,6 +354,8 @@ def run_publish(rid, platforms):
             r = load(con.execute("SELECT * FROM reels WHERE id=?", (rid,)).fetchone())
             path = os.path.join(MEDIA, r["video"])
             caption = full_caption(r, s)
+            cover_sec = r.get("cover_sec")
+            cover_sec = DEFAULT_COVER_SEC if cover_sec is None else cover_sec
             tags = [t.lstrip("#") for t in r["hashtags"].split() if t.startswith("#")]
             yt_desc = "\n\n".join(p for p in [r["yt_description"] or r["caption"], r["hashtags"],
                                               s.get("caption_footer", "")] if p.strip())
@@ -325,9 +364,11 @@ def run_publish(rid, platforms):
                 _set_platform(con, rid, p, state)
                 try:
                     if p == "instagram":
-                        res = pub.publish_instagram(s, path, caption)
+                        res = pub.publish_instagram(s, path, caption, int(cover_sec * 1000))
                     elif p == "facebook":
-                        res = pub.publish_facebook(s, path, caption)
+                        res = pub.publish_facebook(s, path, caption, cover_path(r))
+                        if res.get("note"):
+                            log(con, rid, "facebook: " + res["note"])
                     else:
                         title = r["yt_title"] or r["title"]
                         if "#shorts" not in title.lower():

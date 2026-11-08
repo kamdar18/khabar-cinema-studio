@@ -66,27 +66,30 @@ def meta_check(settings):
     return {"page_name": data.get("name"), "ig_id": ig.get("id"), "ig_username": ig.get("username")}
 
 
-def publish_instagram(settings, video_path, caption):
+def publish_instagram(settings, video_path, caption, thumb_ms=None):
     try:
-        return _publish_instagram(settings, video_path, caption)
+        return _publish_instagram(settings, video_path, caption, thumb_ms)
     except PublishError as e:
         if "upload" not in str(e) and "processing" not in str(e).lower():
             raise
         time.sleep(15)  # a fresh container and a second upload fixes most transient upload errors
-        return _publish_instagram(settings, video_path, caption)
+        return _publish_instagram(settings, video_path, caption, thumb_ms)
 
 
-def _publish_instagram(settings, video_path, caption):
+def _publish_instagram(settings, video_path, caption, thumb_ms=None):
     token = settings.get("meta_page_token")
     ig_id = settings.get("ig_user_id") or meta_check(settings).get("ig_id")
     if not ig_id:
         raise PublishError("Instagram account Page sathe link nathi")
     g = _graph(settings)
+    data = {"media_type": "REELS", "upload_type": "resumable", "caption": caption,
+            "share_to_feed": "true", "access_token": token}
+    if thumb_ms is not None:
+        data["thumb_offset"] = str(int(thumb_ms))  # cover frame, in ms from the start
     c = _check(
         requests.post(
             f"{g}/{ig_id}/media",
-            data={"media_type": "REELS", "upload_type": "resumable", "caption": caption,
-                  "share_to_feed": "true", "access_token": token},
+            data=data,
             timeout=TIMEOUT,
         ),
         "Instagram container",
@@ -122,7 +125,7 @@ def _publish_instagram(settings, video_path, caption):
     return {"id": media_id, "url": link}
 
 
-def publish_facebook(settings, video_path, caption):
+def publish_facebook(settings, video_path, caption, cover_path=None):
     token, page_id = settings.get("meta_page_token"), settings.get("meta_page_id")
     if not token or not page_id:
         raise PublishError("Page ID ane Page token settings ma nathi")
@@ -143,7 +146,17 @@ def publish_facebook(settings, video_path, caption):
         ),
         "Facebook reel publish",
     )
-    return {"id": video_id, "url": f"https://www.facebook.com/reel/{video_id}"}
+    out = {"id": video_id, "url": f"https://www.facebook.com/reel/{video_id}"}
+    if cover_path and os.path.exists(cover_path):
+        try:  # best effort: the reel is already live, a cover failure must not mark it failed
+            with open(cover_path, "rb") as f:
+                _check(requests.post(f"{g}/{video_id}/thumbnails",
+                                     data={"is_preferred": "true", "access_token": token},
+                                     files={"source": ("cover.jpg", f, "image/jpeg")}, timeout=TIMEOUT),
+                       "Facebook cover")
+        except Exception as e:
+            out["note"] = f"cover set nahi thayu: {e}"[:200]
+    return out
 
 
 # ---------------------------------------------------------------- YouTube

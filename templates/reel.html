@@ -1,5 +1,5 @@
 {% extends "base.html" %}{% block body %}
-<video src="/media/{{ r.video }}" controls playsinline preload="metadata"></video>
+<video id="vid" src="/media/{{ r.video }}" controls playsinline preload="metadata"></video>
 <p class="row"><span class="grow"><b>{{ r.title }}</b> <span class="pill">{{ r.status }}</span></span>
 <a class="btn ghost" href="/media/{{ r.video }}?dl=1">⬇️ Download</a></p>
 
@@ -17,6 +17,15 @@
 <label>Title</label><input name="title" value="{{ r.title }}">
 <label>Caption</label><textarea name="caption" rows="7">{{ r.caption }}</textarea>
 <label>Hashtags</label><input name="hashtags" value="{{ r.hashtags }}">
+{% set csec = r.cover_sec if r.cover_sec is not none else default_cover %}
+<label>Cover (Instagram/Facebook par dekhatu pehlu chitra)</label>
+<div class="row" style="align-items:center;gap:10px">
+<img id="cimg" alt="" style="width:90px;aspect-ratio:9/16;object-fit:cover;border-radius:8px;background:#000;border:1px solid var(--line)"
+ {% if has_cover %}src="/media/{{ r.video.rsplit('.',1)[0] }}.jpg?v={{ csec }}"{% endif %}>
+<div class="grow"><input type="range" id="crange" min="0" max="60" step="0.1" value="{{ csec }}">
+<small>Slider khasedo: video e frame par jashe. <b id="csec">{{ '%.1f'|format(csec) }}</b> sec · Save dabavo etle cover nakki.</small></div></div>
+<input type="hidden" name="cover_sec" id="cover_sec" value="{{ csec }}">
+<input type="hidden" name="cover_jpg" id="cover_jpg">
 <label>YouTube title</label><input name="yt_title" value="{{ r.yt_title }}" maxlength="100">
 <label>YouTube description</label><textarea name="yt_description">{{ r.yt_description }}</textarea>
 <label>Instagram/Facebook par aavu dekhashe</label><pre>{{ preview }}</pre>
@@ -35,6 +44,24 @@
 <p><button class="btn ghost block" name="action" value="delete" style="color:#ff9aa8"
  onclick="return confirm('Video server mathi delete thashe (posted reels social media par raheshe). Pakku?')">Server mathi delete</button></p>
 </form>
+
+<script>
+(function(){
+  const v=document.getElementById('vid'), rg=document.getElementById('crange'), out=document.getElementById('csec'),
+        sec=document.getElementById('cover_sec'), jpg=document.getElementById('cover_jpg'), img=document.getElementById('cimg');
+  if(!v||!rg) return;
+  function grab(){
+    if(!v.videoWidth) return;
+    const w=720, h=Math.round(720*v.videoHeight/v.videoWidth), c=document.createElement('canvas');
+    c.width=w; c.height=h; c.getContext('2d').drawImage(v,0,0,w,h);
+    try{ const d=c.toDataURL('image/jpeg',0.82); jpg.value=d; img.src=d; }catch(e){}
+  }
+  v.addEventListener('loadedmetadata',()=>{ rg.max=Math.max(0.1,(v.duration-0.1)).toFixed(1);
+    if(!img.getAttribute('src')){ v.currentTime=Math.min(+rg.value, v.duration-0.1); } });
+  v.addEventListener('seeked',()=>{ if(Math.abs(v.currentTime-(+rg.value))<0.3) grab(); });
+  rg.addEventListener('input',()=>{ out.textContent=(+rg.value).toFixed(1); sec.value=rg.value; v.pause(); v.currentTime=+rg.value; });
+})();
+</script>
 
 <details class="card"><summary>History</summary>
 {% for l in logs %}<div><small>{{ l.at[:16].replace('T',' ') }}</small> {{ l.msg }}</div>{% endfor %}</details>
